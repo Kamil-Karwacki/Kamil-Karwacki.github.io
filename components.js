@@ -29,3 +29,15 @@ class Vector2 {
         this.y = y;
     }
 }
+
+class Ball {
+    constructor(x, y, radius, bounciness) {
+        this.pos = new Vector2(x, y);
+        this.vel = new Vector2(0, 0);
+        this.radius = radius;
+        this.xDrag = 0.5;
+        this.yDrag = 0.5;
+        this.bounciness = bounciness;
+        this.col = "blue";
+    }
+}
