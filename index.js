@@ -21,6 +21,8 @@ let input = {
 Start();
 setInterval(Update, 1000/tps);
 
+
+
 function Start() {
     CreateCollisionBox(0, 700, 2000, 10);
     CreateCollisionBox(15, 620, 35, 10);
@@ -48,6 +50,9 @@ function Update() {
     ctx.fill();
     UpdatePlayer(player1);
     UpdateBall(ball);
+
+    player1.pos.x += player1.vel.x * deltaTime * timescale;
+    player1.pos.y += player1.vel.y * deltaTime * timescale;    
 }
 
 function UpdatePlayer(player) {
@@ -66,8 +71,6 @@ function UpdatePlayer(player) {
         if(isPointInsideAABB(nextFramePos, player.width, player.height, ColBoxes[i])) {
             hasCollided = true;
             player.col = "blue";
-
-            let topMiddle = new Vector2((nextFramePos.x + player.width)/2, nextFramePos.y);
 
             let topFace = isPointInsideAABB(new Vector2(nextFramePos.x, nextFramePos.y), player.width/2, 1, ColBoxes[i]);
             let rightFace = isPointInsideAABB(new Vector2(nextFramePos.x + player.width, nextFramePos.y), 1, player.height/2, ColBoxes[i]);
@@ -94,81 +97,94 @@ function UpdatePlayer(player) {
 
     if(!hasCollided)
         player.isGrounded = false;
-    hasCollided = false;
-    player.pos.x += player.vel.x * deltaTime * timescale;
-    player.pos.y += player.vel.y * deltaTime * timescale;    
-    
+    hasCollided = false;    
 }
 
 function UpdateBall(ball) {
-    
     ball.vel.y += gravity * deltaTime;
     
-    ball.vel.y += -drag * ball.xDrag * ball.vel.y * Math.abs(ball.vel.y) * deltaTime;
-    ball.vel.x += -drag * ball.yDrag * ball.vel.x * Math.abs(ball.vel.x) * deltaTime;
+    ball.vel.y += -drag/10 * ball.xDrag * ball.vel.y * Math.abs(ball.vel.y) * deltaTime;
+    ball.vel.x += -drag/10 * ball.yDrag * ball.vel.x * Math.abs(ball.vel.x) * deltaTime;
     
     ball.vel.x += -(0.2 * ball.vel.x) * deltaTime; // friction
     
     let nextFramePos = new Vector2(ball.pos.x + ball.vel.x * deltaTime * timescale, ball.pos.y + ball.vel.y * deltaTime * timescale);
-    for(let i=0; i<ColBoxes.length; i++) {
-        let sqrDist = 0;
 
-        if(nextFramePos.x < ColBoxes[i].pos.x) sqrDist += (ColBoxes[i].pos.x - nextFramePos.x) * (ColBoxes[i].pos.x - nextFramePos.x);
-        if(nextFramePos.x > ColBoxes[i].pos.x + ColBoxes[i].width) sqrDist += (nextFramePos.x - ColBoxes[i].pos.x + ColBoxes[i].width) * (nextFramePos.x - ColBoxes[i].pos.x + ColBoxes[i].width);
 
-        if(nextFramePos.y < ColBoxes[i].pos.y) sqrDist += (ColBoxes[i].pos.y - nextFramePos.y) * (ColBoxes[i].pos.y - nextFramePos.y);
-        if(nextFramePos.y > ColBoxes[i].pos.y + ColBoxes[i].height) sqrDist += (nextFramePos.y - ColBoxes[i].pos.y + ColBoxes[i].height) * (nextFramePos.y - ColBoxes[i].pos.y + ColBoxes[i].height);
+    let bx = nextFramePos.x;
+    let by = nextFramePos.y;
+    if(bx < player1.pos.x) bx = player1.pos.x; //bx = Math.max(bx, player1.pos.x);
+    if(bx > player1.pos.x + player1.width) bx = player1.pos.x + player1.width; //bx = Math.min(bx, player1.pos.x + player1.width);
+    
+    if(by < player1.pos.y) by = player1.pos.y; //by = Math.max(by, player1.pos.y);
+    if(by > player1.pos.y + player1.height) by = player1.pos.y + player1.height; //by = Math.min(by, player1.pos.y + player1.height);
 
-        if(sqrDist < ball.radius * ball.radius) {
-            console.log("collision")
-            let bx = nextFramePos.x;
-            let by = nextFramePos.y;
-            if(bx < ColBoxes[i].pos.x) bx = ColBoxes[i].pos.x;
-            if(bx > ColBoxes[i].pos.x + ColBoxes[i].width) bx = ColBoxes[i].pos.x + ColBoxes[i].width;
-
-            if(by < ColBoxes[i].pos.y) by = ColBoxes[i].pos.y;
-            if(by > ColBoxes[i].pos.y + ColBoxes[i].height) by = ColBoxes[i].pos.y + ColBoxes[i].height;
-
-            ctx.fillStyle = "blue";
-            ctx.fillRect(bx, by, 10, 10);
-
-            ball.vel.x *= -ball.bounciness;
-            ball.vel.y *= -ball.bounciness;
-
-            ball.vel.x += (nextFramePos.x - bx);
-            ball.vel.y += (nextFramePos.y - by);
-            }
-    }
-
-    let sqrDist = 0;
-
-    if(nextFramePos.x < player1.pos.x) sqrDist += (player1.pos.x - nextFramePos.x) * (player1.pos.x - nextFramePos.x);
-    if(nextFramePos.x > player1.pos.x + player1.width) sqrDist += (nextFramePos.x - player1.pos.x + player1.width) * (nextFramePos.x - player1.pos.x + player1.width);
-
-    if(nextFramePos.y < player1.pos.y) sqrDist += (player1.pos.y - nextFramePos.y) * (player1.pos.y - nextFramePos.y);
-    if(nextFramePos.y > player1.pos.y + player1.height) sqrDist += (nextFramePos.y - player1.pos.y + player1.height) * (nextFramePos.y - player1.pos.y + player1.height);
-
-    if(sqrDist < ball.radius * ball.radius) {
+    let distFromCol = new Vector2(nextFramePos.x - bx, nextFramePos.y - by).magnitude();
+    if(distFromCol < ball.radius) {
         console.log("player ball collision")
-        let bx = nextFramePos.x;
-        let by = nextFramePos.y;
-        if(bx < player1.pos.x) bx = player1.pos.x; //bx = Math.max(bx, player1.pos.x);
-        if(bx > player1.pos.x + player1.width) bx = player1.pos.x + player1.width; //bx = Math.min(bx, player1.pos.x + player1.width);
-
-        if(by < player1.pos.y) by = player1.pos.y; //by = Math.max(by, player1.pos.y);
-        if(by > player1.pos.y + player1.height) by = player1.pos.y + player1.height; //by = Math.min(by, player1.pos.y + player1.height);
 
         ctx.fillStyle = "yellow";
-        ctx.fillRect(bx, by, 10, 10);
+        ctx.fillRect(bx - 5, by - 5, 10, 10);
 
-        ball.vel.x *= -ball.bounciness;
-        ball.vel.y *= -ball.bounciness;
+        ctx.fillStyle = "purple";
+        ctx.fillRect(nextFramePos.x - 5, nextFramePos.y - 5, 10, 10);
+        let oldVel = ball.vel;
 
-        ball.vel.x += player1.vel.x;
-        ball.vel.y += player1.vel.y;
+        let dirVector = new Vector2(nextFramePos.x - bx, nextFramePos.y - by);
+        dirVector = dirVector.normalize();
+        console.log(dirVector)
+        ball.vel.x += dirVector.x * 1 * clamp(Math.abs(oldVel.x), 0, 1) * Math.abs(dirVector.x);
+        //ball.vel.x += player1.vel.x;
+        if(dirVector.x > 0) 
+            ball.vel.x = clamp(ball.vel.x, 1, 10000)
+        else 
+            ball.vel.x = clamp(ball.vel.x, -10000, -1)
+        
+        if(dirVector.y < 0) { // if player is below the ball
+            ball.vel.y += dirVector.y * clamp(Math.abs(oldVel.y), 0, 1) * 1 * Math.abs(dirVector.y);
+            ball.vel.y += player1.vel.y;
+            ball.vel.y = clamp(ball.vel.y, -10000, -5);
+        } else { // if player is on top of the ball
+            player1.vel.y = 0;
+        }
 
-        ball.vel.x += (nextFramePos.x - bx) * deltaTime;
-        ball.vel.y += (nextFramePos.y - by) * deltaTime;
+        ball.vel.x += dirVector.x * 100;
+        ball.vel.y += dirVector.y * 2;
+
+    }
+    
+    for(let i=0; i<ColBoxes.length; i++) {
+        let bx = nextFramePos.x;
+        let by = nextFramePos.y;
+        if(bx < ColBoxes[i].pos.x) bx = ColBoxes[i].pos.x;
+        if(bx > ColBoxes[i].pos.x + ColBoxes[i].width) bx = ColBoxes[i].pos.x + ColBoxes[i].width;
+
+        if(by < ColBoxes[i].pos.y) by = ColBoxes[i].pos.y;
+        if(by > ColBoxes[i].pos.y + ColBoxes[i].height) by = ColBoxes[i].pos.y + ColBoxes[i].height;
+        if(new Vector2(nextFramePos.x - bx, nextFramePos.y - by).magnitude() < ball.radius) {
+            console.log("collision")
+
+            ctx.fillStyle = "blue";
+            ctx.fillRect(bx-5, by-5, 10, 10);
+
+            //ball.vel.x *= -bll.bounciness;
+            //ball.vel.y *= -ball.bounciness;
+            let dirVector = new Vector2(nextFramePos.x - bx, nextFramePos.y - by);
+            let oldVel = ball.vel;
+            dirVector = dirVector.normalize();
+            console.log(dirVector)
+            if(dirVector.x > 0) {
+                ball.vel.x += (nextFramePos.x - bx) * Math.abs(oldVel.x) * 0.1;
+                ball.vel.x = clamp(ball.vel.x, 5, 10000)
+            }
+            if(dirVector.y < 0) {
+                ball.vel.y += (nextFramePos.y - by) * Math.abs(oldVel.y) * 0.1;
+                ball.vel.y = clamp(ball.vel.y, -10000, -5);
+            }
+
+            // if distance to the collision point is smaller than radius, cancel force in that direction
+
+        }
     }
 
     ball.pos.x += ball.vel.x * deltaTime * timescale;
@@ -182,7 +198,7 @@ function ProcessInput() {
     if(input.x < 0) 
         player1.vel.x += -500 * deltaTime;
     if(input.y > 0 && player1.isGrounded) {
-        player1.vel.y += -25000 * deltaTime;
+        player1.vel.y += -35000 * deltaTime;
     }
 }
 

@@ -28,6 +28,19 @@ class Vector2 {
         this.x = x;
         this.y = y;
     }
+
+    magnitude() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    normalize() {
+        if(this.x == 0 && this.y == 0)
+            return new Vector2(0,0);
+        let mag = this.magnitude();
+        let x = this.x/mag;
+        let y = this.y/mag;
+        return new Vector2(x, y);
+    }
 }
 
 class Ball {
