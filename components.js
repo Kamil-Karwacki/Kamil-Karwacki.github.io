@@ -1,4 +1,5 @@
-class Player {
+var ColBoxes = [];
+class Rigidbody {
     constructor(x, y, width, height) {
         this.pos = new Vector2(x, y);
         this.vel = new Vector2(0, 0);
@@ -7,20 +8,27 @@ class Player {
         this.xDrag = 1;
         this.yDrag = 3.5;
         this.col = "red";
-        this.isGrounded = false;
     }
 }
 
-var ColBoxes = [];
+class SphereRb {
+    constructor(x, y, radius) {
+        this.pos = new Vector2(x, y);
+        this.vel = new Vector2(0, 0);
+        this.radius = radius;
+        this.xDrag = 1;
+        this.yDrag = 3.5;
+        this.col = "blue";
+    }
+}
 
-function CreateCollisionBox(x, y, width, height) {
-    var tempCol = {
-        'pos': new Vector2(x, y),
-        'width' : width,
-        'height' : height
-    };
-    console.log(tempCol)
-    ColBoxes.push(tempCol);
+class CollisionBox {
+    constructor(x, y, width, height) {
+        this.pos = new Vector2(x, y);
+        this.width = width;
+        this.height = height;
+        ColBoxes.push(this);
+    }
 }
 
 class Vector2 {
@@ -40,17 +48,5 @@ class Vector2 {
         let x = this.x/mag;
         let y = this.y/mag;
         return new Vector2(x, y);
-    }
-}
-
-class Ball {
-    constructor(x, y, radius, bounciness) {
-        this.pos = new Vector2(x, y);
-        this.vel = new Vector2(0, 0);
-        this.radius = radius;
-        this.xDrag = 0.5;
-        this.yDrag = 0.5;
-        this.bounciness = bounciness;
-        this.col = "blue";
     }
 }

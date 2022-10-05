@@ -7,8 +7,9 @@ let lastFrame = Date.now();
 let timescale = 1;
 let tps = 80;
 
-player1 = new Player(100, 600, 30, 30);
-let ball = new Ball(100, 450, 15, 0.7);
+player1 = new Rigidbody(100, 600, 30, 30);
+player2 = new Rigidbody(200, 600, 30, 30);
+let ball = new SphereRb(100, 450, 15);
 
 document.addEventListener('keydown', KeyDownHandler, false);
 document.addEventListener('keyup', KeyUpHandler, false);
@@ -24,10 +25,16 @@ setInterval(Update, 1000/tps);
 
 
 function Start() {
-    CreateCollisionBox(0, 700, 2000, 10);
-    CreateCollisionBox(15, 620, 35, 10);
-    CreateCollisionBox(5, 620, 10, 100);
+    let bottom = new CollisionBox(0, 700, 2000, 10);
 
+    let topL = new CollisionBox(20, 600, 35, 10);
+    let left = new CollisionBox(35, 620, 10, 100);
+
+    let topR = new CollisionBox(420, 600, 35, 10);
+    let right = new CollisionBox(435, 620, 10, 100);
+    ball.vel.x += 20;
+    console.log(-Math.abs(0.8)+1);
+    console.log(-Math.abs(1)+1);
 
     for(let i=0; i<ColBoxes.length; i++) {
         console.log(ColBoxes[i]);
@@ -35,12 +42,12 @@ function Start() {
 }
 
 function Update() {
-    player1.col = "red";
     deltaTime = 1/tps;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    DrawCollisionBoxes();
 
+    DrawCollisionBoxes();
+    
     ctx.fillStyle = player1.col;
     ctx.fillRect(player1.pos.x, player1.pos.y, player1.width, player1.height);
 
@@ -48,155 +55,190 @@ function Update() {
     ctx.beginPath();
     ctx.arc(ball.pos.x, ball.pos.y, ball.radius, 0, 2 * Math.PI);
     ctx.fill();
-    UpdatePlayer(player1);
-    UpdateBall(ball);
 
+
+    
+    UpdateRigidbody(player1);
+    UpdateSphereRb(ball);
+
+    // update each elements position
     player1.pos.x += player1.vel.x * deltaTime * timescale;
-    player1.pos.y += player1.vel.y * deltaTime * timescale;    
+    player1.pos.y += player1.vel.y * deltaTime * timescale; 
+
+    ball.pos.x += ball.vel.x * deltaTime * timescale;
+    ball.pos.y += ball.vel.y * deltaTime * timescale; 
+
 }
 
-function UpdatePlayer(player) {
-    player.vel.y += gravity * deltaTime;
+function UpdateRigidbody(rb) {
+    rb.vel.y += gravity * deltaTime;
     
-    player.vel.y += -drag * player.xDrag * player.vel.y * Math.abs(player.vel.y) * deltaTime;
-    player.vel.x += -drag * player.yDrag * player.vel.x * Math.abs(player.vel.x) * deltaTime;
+    rb.vel.y += -drag * rb.xDrag * rb.vel.y * Math.abs(rb.vel.y) * deltaTime;
+    rb.vel.x += -drag * rb.yDrag * rb.vel.x * Math.abs(rb.vel.x) * deltaTime;
     
-    player.vel.x += -(0.8 * player.vel.x) * deltaTime; // friction
+    rb.vel.x += -(0.8 * rb.vel.x) * deltaTime; // friction
     
-    // player input
     ProcessInput()
     let hasCollided = false;
-    let nextFramePos = new Vector2(player.pos.x + player.vel.x * deltaTime * timescale, player.pos.y + player.vel.y * deltaTime * timescale);
+    let nextFramePos = new Vector2(rb.pos.x + rb.vel.x * deltaTime * timescale, rb.pos.y + rb.vel.y * deltaTime * timescale);
     for(let i=0; i<ColBoxes.length; i++) {
-        if(isPointInsideAABB(nextFramePos, player.width, player.height, ColBoxes[i])) {
+        if(isPointInsideAABB(nextFramePos, rb.width, rb.height, ColBoxes[i])) { // collision detection
             hasCollided = true;
-            player.col = "blue";
 
-            let topFace = isPointInsideAABB(new Vector2(nextFramePos.x, nextFramePos.y), player.width/2, 1, ColBoxes[i]);
-            let rightFace = isPointInsideAABB(new Vector2(nextFramePos.x + player.width, nextFramePos.y), 1, player.height/2, ColBoxes[i]);
-            let bottomFace = isPointInsideAABB(new Vector2(nextFramePos.x + player.width / 4, nextFramePos.y + player.height), player.width/2, 2, ColBoxes[i]);
-            let leftFace = isPointInsideAABB(new Vector2(nextFramePos.x, nextFramePos.y), 1, player.height/2, ColBoxes[i]);
+            let topFace = isPointInsideAABB(new Vector2(nextFramePos.x, nextFramePos.y), rb.width/2, 1, ColBoxes[i]);
+            let rightFace = isPointInsideAABB(new Vector2(nextFramePos.x + rb.width, nextFramePos.y), 1, rb.height/2, ColBoxes[i]);
+            let bottomFace = isPointInsideAABB(new Vector2(nextFramePos.x + rb.width / 4, nextFramePos.y + rb.height), rb.width/2, 2, ColBoxes[i]);
+            let leftFace = isPointInsideAABB(new Vector2(nextFramePos.x, nextFramePos.y), 1, rb.height/2, ColBoxes[i]);
             ctx.fillStyle = 'purple';
-            ctx.fillRect(nextFramePos.x + player.width / 4, nextFramePos.y + player.height, player.width/2, 3);
-            player.isGrounded = bottomFace;
+            ctx.fillRect(nextFramePos.x + rb.width / 4, nextFramePos.y + rb.height, rb.width/2, 3);
+            rb.isGrounded = bottomFace;
 
             if(topFace && !bottomFace) { // top collision
-                player.vel.y = clamp(player.vel.y, 0, 10000);
+                rb.vel.y = Clamp(rb.vel.y, 0, 10000);
             } else if(!topFace && bottomFace) { // bottom collision
-                player.vel.y = clamp(player.vel.y, -10000, 0);
-                player.isGrounded = true;
+                rb.vel.y = Clamp(rb.vel.y, -10000, 0);
+                rb.isGrounded = true;
             }
             
             if(leftFace && !rightFace) { // left collision
-                player.vel.x = clamp(player.vel.x, 0, 10000);
+                rb.vel.x = Clamp(rb.vel.x, 0, 10000);
             } else if(!leftFace && rightFace) { // right collision
-                player.vel.x = clamp(player.vel.x, -10000, 0);
+                rb.vel.x = Clamp(rb.vel.x, -10000, 0);
             }
         }
     }
 
     if(!hasCollided)
-        player.isGrounded = false;
-    hasCollided = false;    
+        rb.isGrounded = false;
+    hasCollided = false;   
 }
 
-function UpdateBall(ball) {
-    ball.vel.y += gravity * deltaTime;
+function UpdateSphereRb(rb) {
+    rb.vel.y += gravity * deltaTime;
     
-    ball.vel.y += -drag/10 * ball.xDrag * ball.vel.y * Math.abs(ball.vel.y) * deltaTime;
-    ball.vel.x += -drag/10 * ball.yDrag * ball.vel.x * Math.abs(ball.vel.x) * deltaTime;
+    //rb.vel.y += -drag/10 * rb.xDrag * rb.vel.y * Math.abs(rb.vel.y) * deltaTime;
+    //rb.vel.x += -drag/10 * rb.yDrag * rb.vel.x * Math.abs(rb.vel.x) * deltaTime;
     
-    ball.vel.x += -(0.2 * ball.vel.x) * deltaTime; // friction
-    
-    let nextFramePos = new Vector2(ball.pos.x + ball.vel.x * deltaTime * timescale, ball.pos.y + ball.vel.y * deltaTime * timescale);
+    rb.vel.x += -(0.8 * rb.vel.x) * deltaTime; // friction
 
+    let nextFramePos = new Vector2(rb.pos.x + rb.vel.x * deltaTime * timescale, rb.pos.y + rb.vel.y * deltaTime * timescale);
 
-    let bx = nextFramePos.x;
-    let by = nextFramePos.y;
-    if(bx < player1.pos.x) bx = player1.pos.x; //bx = Math.max(bx, player1.pos.x);
-    if(bx > player1.pos.x + player1.width) bx = player1.pos.x + player1.width; //bx = Math.min(bx, player1.pos.x + player1.width);
-    
-    if(by < player1.pos.y) by = player1.pos.y; //by = Math.max(by, player1.pos.y);
-    if(by > player1.pos.y + player1.height) by = player1.pos.y + player1.height; //by = Math.min(by, player1.pos.y + player1.height);
+    //sphere ball collision
 
-    let distFromCol = new Vector2(nextFramePos.x - bx, nextFramePos.y - by).magnitude();
-    if(distFromCol < ball.radius) {
-        console.log("player ball collision")
+    if(isSphereCollidingWithAABB(nextFramePos, rb.radius, player1)) {
+        console.log("Sphere collision with player");
+        let colPoint = new Vector2(nextFramePos.x, nextFramePos.y);
+
+        if(colPoint.x < player1.pos.x) colPoint.x = player1.pos.x;
+        if(colPoint.x > player1.pos.x + player1.width) colPoint.x = player1.pos.x + player1.width;
+        
+        if(colPoint.y < player1.pos.y) colPoint.y = player1.pos.y;
+        if(colPoint.y > player1.pos.y + player1.height) colPoint.y = player1.pos.y + player1.height;
+
+        let colVec = new Vector2(rb.pos.x - colPoint.x, rb.pos.y - colPoint.y);
+        let normColVel = colVec.normalize();
 
         ctx.fillStyle = "yellow";
-        ctx.fillRect(bx - 5, by - 5, 10, 10);
-
-        ctx.fillStyle = "purple";
-        ctx.fillRect(nextFramePos.x - 5, nextFramePos.y - 5, 10, 10);
-        let oldVel = ball.vel;
-
-        let dirVector = new Vector2(nextFramePos.x - bx, nextFramePos.y - by);
-        dirVector = dirVector.normalize();
-        console.log(dirVector)
-        ball.vel.x += dirVector.x * 1 * clamp(Math.abs(oldVel.x), 0, 1) * Math.abs(dirVector.x);
-        //ball.vel.x += player1.vel.x;
-        if(dirVector.x > 0) 
-            ball.vel.x = clamp(ball.vel.x, 1, 10000)
-        else 
-            ball.vel.x = clamp(ball.vel.x, -10000, -1)
+        ctx.fillRect(colPoint.x - 5, colPoint.y - 5, 10, 10);
         
-        if(dirVector.y < 0) { // if player is below the ball
-            ball.vel.y += dirVector.y * clamp(Math.abs(oldVel.y), 0, 1) * 1 * Math.abs(dirVector.y);
-            ball.vel.y += player1.vel.y;
-            ball.vel.y = clamp(ball.vel.y, -10000, -5);
-        } else { // if player is on top of the ball
-            player1.vel.y = 0;
-        }
+        rb.vel.x *= -Math.abs(normColVel.x)+1;
+        rb.vel.y *= -Math.abs(normColVel.y)+1;
 
-        ball.vel.x += dirVector.x * 100;
-        ball.vel.y += dirVector.y * 2;
+        // Hookes law F = -kx
+        // Need to find how deep into object collision has happened, deeper = more force
 
+        // get vector to collision point
+        let ToColPointVec = new Vector2(colPoint.x - rb.pos.x, colPoint.y - rb.pos.y);
+        ToColPointVec = ToColPointVec.normalize();
+        ToColPointVec.x *= rb.radius;
+        ToColPointVec.y *= rb.radius;
+
+        // distance from
+        let dist = new Vector2((nextFramePos.x + ToColPointVec.x) - colPoint.x, (nextFramePos.y + ToColPointVec.y) - colPoint.y).magnitude();
+        console.log(dist)
+
+        ctx.fillStyle = "aqua";
+        ctx.fillRect(nextFramePos.x + ToColPointVec.x - 5, nextFramePos.y + ToColPointVec.y - 5, 10, 10);
+
+        
+        rb.vel.x += 45 * dist * normColVel.x;
+        rb.vel.y += 50 * dist * normColVel.y;
     }
     
+    
     for(let i=0; i<ColBoxes.length; i++) {
-        let bx = nextFramePos.x;
-        let by = nextFramePos.y;
-        if(bx < ColBoxes[i].pos.x) bx = ColBoxes[i].pos.x;
-        if(bx > ColBoxes[i].pos.x + ColBoxes[i].width) bx = ColBoxes[i].pos.x + ColBoxes[i].width;
+        if(!isSphereCollidingWithAABB(nextFramePos, rb.radius, ColBoxes[i]))
+        continue;
+        console.log("Sphere collision with box");
+        let oldVel = new Vector2(rb.vel.x, rb.vel.y);
 
-        if(by < ColBoxes[i].pos.y) by = ColBoxes[i].pos.y;
-        if(by > ColBoxes[i].pos.y + ColBoxes[i].height) by = ColBoxes[i].pos.y + ColBoxes[i].height;
-        if(new Vector2(nextFramePos.x - bx, nextFramePos.y - by).magnitude() < ball.radius) {
-            console.log("collision")
+        let colPoint = new Vector2(nextFramePos.x, nextFramePos.y);
 
-            ctx.fillStyle = "blue";
-            ctx.fillRect(bx-5, by-5, 10, 10);
+        if(colPoint.x < ColBoxes[i].pos.x) colPoint.x = ColBoxes[i].pos.x;
+        if(colPoint.x > ColBoxes[i].pos.x + ColBoxes[i].width) colPoint.x = ColBoxes[i].pos.x + ColBoxes[i].width;
+        
+        if(colPoint.y < ColBoxes[i].pos.y) colPoint.y = ColBoxes[i].pos.y;
+        if(colPoint.y > ColBoxes[i].pos.y + ColBoxes[i].height) colPoint.y = ColBoxes[i].pos.y + ColBoxes[i].height;
 
-            //ball.vel.x *= -bll.bounciness;
-            //ball.vel.y *= -ball.bounciness;
-            let dirVector = new Vector2(nextFramePos.x - bx, nextFramePos.y - by);
-            let oldVel = ball.vel;
-            dirVector = dirVector.normalize();
-            console.log(dirVector)
-            if(dirVector.x > 0) {
-                ball.vel.x += (nextFramePos.x - bx) * Math.abs(oldVel.x) * 0.1;
-                ball.vel.x = clamp(ball.vel.x, 5, 10000)
-            }
-            if(dirVector.y < 0) {
-                ball.vel.y += (nextFramePos.y - by) * Math.abs(oldVel.y) * 0.1;
-                ball.vel.y = clamp(ball.vel.y, -10000, -5);
-            }
+        let colVec = new Vector2(nextFramePos.x - colPoint.x, nextFramePos.y - colPoint.y);
+        let normColVel = colVec.normalize();
 
-            // if distance to the collision point is smaller than radius, cancel force in that direction
+        ctx.fillStyle = "purple";
+        ctx.fillRect(colPoint.x - 5, colPoint.y - 5, 10, 10);
+        
+        rb.vel.x *= -Math.abs(normColVel.x)+1;
+        rb.vel.y *= -Math.abs(normColVel.y)+1;
 
-        }
+        // Hookes law F = -kx
+        // Need to find how deep into object collision has happened, deeper = more force
+
+        // get vector to collision point
+        let ToColPointVec = new Vector2(colPoint.x - nextFramePos.x, colPoint.y - nextFramePos.y);
+        ToColPointVec = ToColPointVec.normalize();
+        ToColPointVec.x *= rb.radius;
+        ToColPointVec.y *= rb.radius;
+
+        // distance from
+        let dist = new Vector2((rb.pos.x + ToColPointVec.x) - colPoint.x, (rb.pos.y + ToColPointVec.y) - colPoint.y).magnitude();
+        console.log(dist)
+
+        ctx.fillStyle = "aqua";
+        ctx.fillRect(rb.pos.x + ToColPointVec.x - 5, rb.pos.y + ToColPointVec.y - 5, 10, 10);
+
+        
+        rb.vel.x += 90 * dist * normColVel.x;
+        rb.vel.y += 90 * dist * normColVel.y;
+
+        // add spring from that object to push it back/ add bounciness idk maybe both
+
     }
-
-    ball.pos.x += ball.vel.x * deltaTime * timescale;
-    ball.pos.y += ball.vel.y * deltaTime * timescale;  
 }
 
+function isPointInsideAABB(point, width, height, box) {
+    return (
+        point.x < box.pos.x + box.width &&
+        point.x + width > box.pos.x &&
+        point.y < box.pos.y + box.height &&
+        height + point.y > box.pos.y
+    );
+}
+
+function isSphereCollidingWithAABB(pos, radius, box) {
+    let x = Math.max(box.pos.x, Math.min(pos.x, box.pos.x + box.width));
+    let y = Math.max(box.pos.y, Math.min(pos.y, box.pos.y + box.height));
+    
+    let distance = (x - pos.x) * (x - pos.x) + (y - pos.y) * (y - pos.y);
+
+    if(distance < radius * radius) 
+        return true
+    return false
+}
 
 function ProcessInput() {
     if(input.x > 0) 
         player1.vel.x += 500 * deltaTime;
     if(input.x < 0) 
-        player1.vel.x += -500 * deltaTime;
+    player1.vel.x += -500 * deltaTime;
     if(input.y > 0 && player1.isGrounded) {
         player1.vel.y += -35000 * deltaTime;
     }
@@ -235,13 +277,5 @@ function DrawCollisionBoxes() {
     }
 }
 
-function isPointInsideAABB(point, width, height, box) {
-    return (
-        point.x < box.pos.x + box.width &&
-        point.x + width > box.pos.x &&
-        point.y < box.pos.y + box.height &&
-        height + point.y > box.pos.y
-    );
-}
 
-const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+const Clamp = (num, min, max) => Math.min(Math.max(num, min), max);
